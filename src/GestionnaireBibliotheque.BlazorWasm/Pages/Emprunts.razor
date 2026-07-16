@@ -61,6 +61,26 @@ else
         <span class="text-muted">@EmpruntsAffiches.Count emprunt(s) affiché(s)</span>
     </div>
 
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <h6 class="card-title mb-2">Signification des états</h6>
+            <ul class="list-unstyled small mb-0">
+                <li class="mb-1">
+                    <span class="badge @ClasseEtat("Actif")">Actif</span>
+                    — emprunt en cours : l'exemplaire n'a pas encore été rendu.
+                </li>
+                <li class="mb-1">
+                    <span class="badge @ClasseEtat("Cloture")">Clôturé</span>
+                    — l'exemplaire a été rendu <strong>dans les délais</strong>.
+                </li>
+                <li>
+                    <span class="badge @ClasseEtat("Retard")">En retard</span>
+                    — l'exemplaire a été rendu <strong>après l'échéance</strong> (une pénalité a été générée).
+                </li>
+            </ul>
+        </div>
+    </div>
+
     <table class="table">
         <thead>
             <tr><th>Ouvrage</th><th>Membre</th><th>Emprunt</th>
@@ -84,7 +104,7 @@ else
                     <td>@e.DateEmprunt.ToString("yyyy-MM-dd")</td>
                     <td>@e.DateRetourPrevue.ToString("yyyy-MM-dd")</td>
                     <td>@(e.DateRetourReel?.ToString("yyyy-MM-dd") ?? "—")</td>
-                    <td>@EtatLisible(e.EtatEmprunt)</td>
+                    <td><span class="badge @ClasseEtat(e.EtatEmprunt)">@EtatLisible(e.EtatEmprunt)</span></td>
                     <td>
                         @if (e.DateRetourReel is null)
                         {
@@ -206,6 +226,13 @@ else
         "Cloture" => "Clôturé",
         "Retard" => "En retard",
         _ => etat // Actif
+    };
+
+    private static string ClasseEtat(string etat) => etat switch
+    {
+        "Cloture" => "bg-success",
+        "Retard" => "bg-danger",
+        _ => "bg-info text-dark" // Actif
     };
 
     private int Disponibles(int ouvrageId)

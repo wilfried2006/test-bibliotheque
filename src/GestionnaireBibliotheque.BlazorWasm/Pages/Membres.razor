@@ -19,7 +19,29 @@
 }
 else
 {
-    <button class="btn btn-primary mb-3" @onclick="Ouvrir">+ Ajouter un membre</button>
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <button class="btn btn-primary" @onclick="Ouvrir">+ Ajouter un membre</button>
+        <span class="text-muted">@membres.Count membre(s)</span>
+    </div>
+
+    @if (types is { Count: > 0 })
+    {
+        <div class="card mb-3">
+            <div class="card-body py-2">
+                <h6 class="card-title mb-2">Types d'adhérent</h6>
+                <ul class="list-unstyled small mb-0">
+                    @foreach (var t in types)
+                    {
+                        <li class="mb-1">
+                            <span class="badge @ClasseType(t.Id)">@t.Libelle</span>
+                            — jusqu'à <strong>@t.NombreOuvragesMax ouvrage(s)</strong> empruntable(s) simultanément,
+                            durée d'emprunt <strong>@t.DureeEmpruntJours jour(s)</strong>.
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
 
     <table class="table">
         <thead>
@@ -32,7 +54,7 @@ else
             }
             @foreach (var m in membres)
             {
-                <tr><td>@m.Id</td><td>@m.Nom</td><td>@m.Prenom</td><td>@m.Email</td><td>@LibelleType(m.TypeAdherentId)</td></tr>
+                <tr><td>@m.Id</td><td>@m.Nom</td><td>@m.Prenom</td><td>@m.Email</td><td><span class="badge @ClasseType(m.TypeAdherentId)">@LibelleType(m.TypeAdherentId)</span></td></tr>
             }
         </tbody>
     </table>
@@ -81,6 +103,19 @@ else
 
     private string LibelleType(byte id)
         => types?.FirstOrDefault(t => t.Id == id)?.Libelle ?? $"#{id}";
+
+    // Une couleur distincte par type d'adhérent (indexée sur la liste chargée).
+    private static readonly string[] PaletteTypes =
+    {
+        "bg-primary", "bg-success", "bg-danger", "bg-warning text-dark",
+        "bg-info text-dark", "bg-secondary", "bg-dark"
+    };
+
+    private string ClasseType(byte id)
+    {
+        var index = types?.FindIndex(t => t.Id == id) ?? -1;
+        return index >= 0 ? PaletteTypes[index % PaletteTypes.Length] : "bg-secondary";
+    }
 
     private void Ouvrir()
     {
