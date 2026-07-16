@@ -1,0 +1,288 @@
+@page "/emprunts"
+@using System.Net.Http.Json
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Emprunts
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Ouvrages
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Exemplaires
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Membres
+@inject RecupereLesEmpruntUseCase RecupereLesEmpruntUseCase
+@inject RecupereLesOuvragesUseCase RecupereLesOuvragesUseCase
+@inject RecupereLesExemplairesUseCase RecupereLesExemplairesUseCase
+@inject RecupereLesMembreUseCase RecupereLesMembreUseCase
+@inject RecupereLesTypesAdherentUseCase RecupereLesTypesAdherentUseCase
+@inject CreerEmpruntUseCase CreerEmpruntUseCase
+@inject RetournerEmpruntUseCase RetournerEmpruntUseCase
+
+<PageTitle>Emprunts</PageTitle>
+
+<h1>Emprunts</h1>
+
+@if (message is not null)
+{
+    <div class="alert alert-info">@message</div>
+}
+@if (erreur is not null)
+{
+    <div class="alert alert-danger">@erreur</div>
+}
+
+@if (emprunts is null)
+{
+    <p><em>Chargement…</em></p>
+}
+else
+{
+    <button class="btn btn-primary mb-3" @onclick="Ouvrir">+ Nouvel emprunt</button>
+
+    <table class="table">
+        <thead>
+            <tr><th>Ouvrage</th><th>Membre</th><th>Emprunt</th>
+                <th>Échéance</th><th>Retour réel</th><th>État</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (emprunts.Count == 0)
+            {
+                <tr>
+                    <td colspan="8">
+                        <em>Aucun emprunt.</em>
+                    </td>
+                </tr>
+            }
+            @foreach (var e in emprunts)
+            {
+                <tr>
+                    <td>@LibelleExemplaire(e.ExemplaireId)</td>
+                    <td>@LibelleMembre(e.MembreId)</td>
+                    <td>@e.DateEmprunt.ToString("yyyy-MM-dd")</td>
+                    <td>@e.DateRetourPrevue.ToString("yyyy-MM-dd")</td>
+                    <td>@(e.DateRetourReel?.ToString("yyyy-MM-dd") ?? "—")</td>
+                    <td>@EtatLisible(e.EtatEmprunt)</td>
+                    <td>
+                        @if (e.DateRetourReel is null)
+                        {
+                            <button class="btn btn-sm btn-warning" @onclick="() => Retourner(e.Id)" disabled="@enCours">
+                                Retourner
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<ModalForm Title="Nouvel emprunt" Visible="afficherModal" Error="@erreurModal"
+           Saving="enCours" SaveDisabled="@SaveDesactive" OnSave="Creer" OnCancel="Fermer">
+    @if (OuvragesDisponibles.Count > 0 && membres is { Count: > 0 })
+    {
+        <label class="form-label mb-0">Ouvrage (exemplaires disponibles)</label>
+        <select class="form-select mb-2" @bind="ouvrageId">
+            <option value="0" disabled>-- Choisir un ouvrage --</option>
+            @foreach (var o in OuvragesDisponibles)
+            {
+                <option value="@o.Id">@o.Titre — dispo : @Disponibles(o.Id)</option>
+            }
+        </select>
+
+        <label class="form-label mb-0">Membre</label>
+        <select class="form-select mb-2" @bind="membreId">
+            <option value="0" disabled>-- Choisir un membre --</option>
+            @foreach (var m in membres)
+            {
+                <option value="@m.Id">@m.Nom @m.Prenom (#@m.Id)</option>
+            }
+        </select>
+
+        <small class="text-muted d-block">
+            Échéance estimée : @EcheanceTexte
+            @if (DureeMembre(membreId) is int j)
+            {
+                <span>(@LibelleTypeMembre(membreId) — @j jours, calculée par le serveur).</span>
+            }
+        </small>
+    }
+    else
+    {
+        <div class="alert alert-warning mb-0">
+            Il faut au moins un <strong>ouvrage avec un exemplaire disponible</strong> et un <strong>membre</strong>.
+        </div>
+    }
+</ModalForm>
+
+@code {
+    private List<EmpruntDto>? emprunts;
+    private List<ExemplaireDto>? exemplaires;
+    private List<OuvrageDto>? ouvrages;
+    private List<MembreDto>? membres;
+    private List<TypeAdherentDto>? types;
+
+    private int ouvrageId;
+    private int membreId;
+    private string? message;
+    private string? erreur;
+    private string? erreurModal;
+    private bool afficherModal;
+    private bool enCours;
+
+    private List<OuvrageDto> OuvragesDisponibles
+        => ouvrages?.Where(o => Disponibles(o.Id) > 0).ToList() ?? new();
+
+    private bool SaveDesactive
+        => OuvragesDisponibles.Count == 0 || membres is not { Count: > 0 } || ouvrageId <= 0 || membreId <= 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ChargerReferences();
+        await Charger();
+    }
+
+    // --- Libellés ---
+    private string TitreOuvrage(int ouvrageId)
+        => ouvrages?.FirstOrDefault(o => o.Id == ouvrageId)?.Titre ?? $"Ouvrage #{ouvrageId}";
+
+    private static string CodeCourt(Guid code) => code.ToString()[..8];
+
+    private string LibelleExemplaire(int exemplaireId)
+    {
+        var ex = exemplaires?.FirstOrDefault(x => x.Id == exemplaireId);
+        return ex is null ? $"#{exemplaireId}" : $"{TitreOuvrage(ex.OuvrageId)}";
+    }
+
+    private string BarcodeExemplaire(int exemplaireId)
+        => exemplaires?.FirstOrDefault(x => x.Id == exemplaireId)?.CodeBarre.ToString() ?? "—";
+
+    private string LibelleMembre(int membreId)
+    {
+        var m = membres?.FirstOrDefault(x => x.Id == membreId);
+        return m is null ? $"#{membreId}" : $"{m.Nom} {m.Prenom}";
+    }
+
+    private static string EtatLisible(string etat) => etat switch
+    {
+        "Cloture" => "Clôturé",
+        "Retard" => "En retard",
+        _ => etat // Actif
+    };
+
+    private int Disponibles(int ouvrageId)
+        => exemplaires?.Count(e => e.OuvrageId == ouvrageId && e.EtatDisponibilite == "Disponible") ?? 0;
+
+    // --- Échéance estimée (le serveur fait foi) ---
+    private TypeAdherentDto? TypeDuMembre(int membreId)
+    {
+        var m = membres?.FirstOrDefault(x => x.Id == membreId);
+        return m is null ? null : types?.FirstOrDefault(t => t.Id == m.TypeAdherentId);
+    }
+
+    private int? DureeMembre(int membreId) => TypeDuMembre(membreId)?.DureeEmpruntJours;
+    private string LibelleTypeMembre(int membreId) => TypeDuMembre(membreId)?.Libelle ?? "—";
+
+    private string EcheanceTexte
+        => DureeMembre(membreId) is int j ? DateTime.Today.AddDays(j).ToString("yyyy-MM-dd") : "—";
+
+    // --- Modal ---
+    private void Ouvrir()
+    {
+        ouvrageId = OuvragesDisponibles.FirstOrDefault()?.Id ?? 0;
+        if (membreId == 0 && membres is { Count: > 0 }) membreId = membres[0].Id;
+        erreurModal = null;
+        afficherModal = true;
+    }
+
+    private void Fermer() => afficherModal = false;
+
+    // --- Chargements ---
+    private async Task ChargerReferences()
+    {
+        ouvrages = await RecupereLesOuvragesUseCase.ExecuteAsync();
+        exemplaires = await RecupereLesExemplairesUseCase.ExecuteAsync();
+        membres = await RecupereLesMembreUseCase.ExecuteAsync();
+        types = await RecupereLesTypesAdherentUseCase.ExecuteAsync();
+
+        if (membreId == 0 && membres is { Count: > 0 }) membreId = membres[0].Id;
+        ouvrages ??= new();
+        exemplaires ??= new();
+        membres ??= new();
+        types ??= new();
+    }
+
+    private async Task Charger()
+    {
+        erreur = null;
+        emprunts = await RecupereLesEmpruntUseCase.ExecuteAsync();
+        emprunts ??= new();
+    }
+
+    private async Task Creer()
+    {
+        if (ouvrageId <= 0 || membreId <= 0)
+        {
+            erreurModal = "Sélectionne un ouvrage et un membre.";
+            return;
+        }
+
+        enCours = true;
+        erreurModal = null;
+        try
+        {
+            var command = new CreerEmpruntCommand(ouvrageId, membreId);
+            var reponse = await CreerEmpruntUseCase.ExecuteAsync(command);
+            if (reponse.IsSuccessStatusCode)
+            {
+                afficherModal = false;
+                message = "Emprunt créé.";
+                await ChargerReferences();
+                await Charger();
+            }
+            else
+            {
+                var probleme = await reponse.Content.ReadFromJsonAsync<ProblemLite>();
+                erreurModal = probleme?.Detail ?? $"Échec (HTTP {(int)reponse.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            erreurModal = ex.Message;
+        }
+        finally
+        {
+            enCours = false;
+        }
+    }
+
+    private async Task Retourner(int id)
+    {
+        enCours = true;
+        message = null;
+        erreur = null;
+        try
+        {
+            var command = new RetournerEmpruntCommand(id);
+            var reponse = await RetournerEmpruntUseCase.ExecuteAsync(command);
+            if (reponse.IsSuccessStatusCode)
+            {
+                var res = await reponse.Content.ReadFromJsonAsync<RetourResultDto>();
+                message = res!.EnRetard
+                    ? $"Emprunt {res.EmpruntId} retourné EN RETARD : {res.JoursRetard} jour(s), pénalité {res.MontantPenalite:0.00} €."
+                    : $"Emprunt {res.EmpruntId} retourné dans les délais (aucune pénalité).";
+                await ChargerReferences();
+                await Charger();
+            }
+            else
+            {
+                var probleme = await reponse.Content.ReadFromJsonAsync<ProblemLite>();
+                erreur = $"Échec du retour (HTTP {(int)reponse.StatusCode}) : {probleme?.Detail}";
+            }
+        }
+        catch (Exception ex)
+        {
+            erreur = ex.Message;
+        }
+        finally
+        {
+            enCours = false;
+        }
+    }
+
+    private record ProblemLite(string? Title, string? Detail);
+}

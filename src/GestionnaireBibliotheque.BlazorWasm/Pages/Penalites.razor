@@ -1,0 +1,186 @@
+@page "/penalites"
+@using GestionnaireBibliotheque.BlazorWasm.Models
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Membres
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Penalites
+@inject RecupereLesMembreUseCase RecupereLesMembreUseCase
+@inject RecupereLespenalitesUseCase RecupereLespenalitesUseCase
+@inject RecupereLePenalitesMembreUseCase RecupereLePenalitesMembreUseCase
+@inject RecupereLeTotalPenalitesMembreUseCase RecupereLeTotalPenalitesMembreUseCase
+
+<PageTitle>Pénalités</PageTitle>
+
+<h1>Pénalités</h1>
+
+@if (erreur is not null)
+{
+    <div class="alert alert-danger">@erreur</div>
+}
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <button class="nav-link @(activeTab == "all" ? "active" : "")" @onclick="@(() => SelectTab("all"))">
+            Toutes les pénalités
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(activeTab == "by-member" ? "active" : "")" @onclick="@(() => SelectTab("by-member"))">
+            Pénalités par membre
+        </button>
+    </li>
+</ul>
+
+@if (activeTab == "all")
+{
+    @if (toutesLesPenalites is null)
+    {
+        <p><em>Chargement…</em></p>
+    }
+    else if (toutesLesPenalites.Count == 0)
+    {
+        <div class="alert alert-info">Aucune pénalité.</div>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr><th>Id</th><th>Membre</th><th>Exemplaire</th><th>Jours de retard</th><th>Montant</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in toutesLesPenalites)
+                {
+                    <tr>
+                        <td>@p.Id</td>
+                        <td>@NomMembre(p.MembreId)</td>
+                        <td>@p.ExemplaireId</td>
+                        <td>@p.JoursRetard</td>
+                        <td>@p.Montant.ToString("0.00") €</td>
+                        <td>@p.DatePenalite.ToString("yyyy-MM-dd")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+else if (activeTab == "by-member")
+{
+    @if (membres is null)
+    {
+        <p><em>Chargement…</em></p>
+    }
+    else if (membres.Count == 0)
+    {
+        <div class="alert alert-warning">Aucun membre. Crée d'abord un membre dans la page <a href="membres">Membres</a>.</div>
+    }
+    else
+    {
+        <div class="mb-3">
+            <label class="form-label mb-0">Membre</label>
+            <select class="form-select mb-1" style="max-width: 360px" @bind="membreId">
+                @foreach (var m in membres)
+                {
+                    <option value="@m.Id">@m.Nom @m.Prenom (#@m.Id)</option>
+                }
+            </select>
+            <button class="btn btn-primary" @onclick="Consulter" disabled="@enCours">Consulter</button>
+        </div>
+    }
+
+    @if (total is not null)
+    {
+        <div class="alert @(total.Plafonne ? "alert-warning" : "alert-success")">
+            Total en cours pour <strong>@NomMembre(total.MembreId)</strong> :
+            <strong>@total.Total.ToString("0.00") €</strong>
+            / plafond @total.Plafond.ToString("0.00") €
+            @(total.Plafonne ? " — plafond atteint" : string.Empty)
+        </div>
+    }
+
+    @if (penalites is not null)
+    {
+        <table class="table">
+            <thead>
+                <tr><th>Id</th><th>Exemplaire</th><th>Jours de retard</th><th>Montant</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+                @if (penalites.Count == 0)
+                {
+                    <tr><td colspan="5"><em>Aucune pénalité pour ce membre.</em></td></tr>
+                }
+                @foreach (var p in penalites)
+                {
+                    <tr>
+                        <td>@p.Id</td>
+                        <td>@p.ExemplaireId</td>
+                        <td>@p.JoursRetard</td>
+                        <td>@p.Montant.ToString("0.00") €</td>
+                        <td>@p.DatePenalite.ToString("yyyy-MM-dd")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private string activeTab = "all";
+    private List<MembreDto>? membres;
+    private List<PenaliteDto>? toutesLesPenalites;
+    private int membreId;
+    private TotalPenalitesDto? total;
+    private List<PenaliteDto>? penalites;
+    private string? erreur;
+    private bool enCours;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ChargerToutesPenalites();
+        await ChargerMembres();
+    }
+
+    private async Task ChargerToutesPenalites()
+    {
+        toutesLesPenalites = await RecupereLespenalitesUseCase.ExecuteAsync();
+        toutesLesPenalites ??= new();
+    }
+
+    private async Task ChargerMembres()
+    {
+        membres = await RecupereLesMembreUseCase.ExecuteAsync();
+        if (membreId == 0 && membres is { Count: > 0 })
+            membreId = membres[0].Id;
+        membres ??= new();
+    }
+
+    private string NomMembre(int id)
+        => membres?.FirstOrDefault(m => m.Id == id) is { } m ? $"{m.Nom} {m.Prenom}" : $"#{id}";
+
+    private void SelectTab(string tab)
+    {
+        activeTab = tab;
+    }
+
+    private async Task Consulter()
+    {
+        if (membreId <= 0)
+        {
+            erreur = "Sélectionne un membre.";
+            return;
+        }
+
+        enCours = true;
+        erreur = null;
+        try
+        {
+            total = await RecupereLeTotalPenalitesMembreUseCase.ExecuteAsync(membreId);
+            penalites = await RecupereLePenalitesMembreUseCase.ExecuteAsync(membreId);
+        }
+        catch (Exception ex)
+        {
+            erreur = $"Impossible de joindre l'API : {ex.Message}";
+        }
+        finally
+        {
+            enCours = false;
+        }
+    }
+}

@@ -1,0 +1,248 @@
+@page "/ouvrages"
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Auteurs
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Ouvrages
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Exemplaires
+@inject RecupereLesAuteursUseCase RecupereLesAuteursUseCase
+@inject RecupereLesOuvragesUseCase RecupereLesOuvragesUseCase
+@inject RecupereLesExemplairesUseCase RecupereLesExemplairesUseCase
+@inject CreerOuvrageUseCase CreerOuvrageUseCase
+@inject CreerExemplaireUseCase CreerExemplaireUseCase
+
+<PageTitle>Ouvrages</PageTitle>
+
+<h1>Ouvrages</h1>
+
+@if (erreur is not null)
+{
+    <div class="alert alert-danger">@erreur</div>
+}
+
+@if (ouvrages is null)
+{
+    <p><em>Chargement…</em></p>
+}
+else
+{
+    <button class="btn btn-primary mb-3" @onclick="Ouvrir">+ Ajouter un ouvrage</button>
+
+    <table class="table">
+        <thead>
+            <tr><th>Id</th><th>Titre</th><th>Auteur</th><th>Exemplaires (dispo/total)</th><th></th></tr>
+        </thead>
+        <tbody>
+            @if (ouvrages.Count == 0)
+            {
+                <tr><td colspan="5"><em>Aucun ouvrage.</em></td></tr>
+            }
+            @foreach (var o in ouvrages)
+            {
+                <tr>
+                    <td>@o.Id</td>
+                    <td>@o.Titre</td>
+                    <td>@NomAuteur(o.AuteurId)</td>
+                    <td>@Disponibles(o.Id) / @Total(o.Id)</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => OuvrirExemplaire(o)">
+                            + Exemplaire
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@* --- Modal : nouvel ouvrage --- *@
+<ModalForm Title="Nouvel ouvrage" Visible="afficherModal" Error="@erreurModal"
+           Saving="enCours" SaveDisabled="@(auteurs is not { Count: > 0 })" OnSave="Ajouter" OnCancel="Fermer">
+    <input class="form-control mb-2" @bind="titre" placeholder="Titre" />
+
+    <label class="form-label mb-0">Nombre d'exemplaires</label>
+    <input class="form-control mb-2" type="number" min="0" @bind="nombreExemplaires" />
+
+    <label class="form-label mb-0">Auteur</label>
+    @if (auteurs is { Count: > 0 })
+    {
+        <select class="form-select" @bind="auteurId">
+            <option value="0" disabled>-- Choisir un auteur --</option>
+            @foreach (var a in auteurs)
+            {
+                <option value="@a.Id">@a.Nom @a.Prenom (#@a.Id)</option>
+            }
+        </select>
+    }
+    else
+    {
+        <div class="alert alert-warning mb-0">
+            Aucun auteur disponible. Crée d'abord un auteur dans la page <a href="auteurs">Auteurs</a>.
+        </div>
+    }
+</ModalForm>
+
+@* --- Modal : nouvel exemplaire rattaché à un ouvrage --- *@
+<ModalForm Title="@($"Nouvel exemplaire — {titreExemplaire}")" Visible="afficherModalExemplaire" Error="@erreurModalExemplaire"
+           Saving="enCoursExemplaire" OnSave="AjouterExemplaire" OnCancel="FermerExemplaire">
+    <p class="text-muted">Le code-barre est généré automatiquement.</p>
+
+    <label class="form-label mb-0">État</label>
+    <select class="form-select" @bind="etatDisponibilite">
+        <option value="Disponible">Disponible</option>
+        <option value="Emprunte">Emprunté</option>
+    </select>
+</ModalForm>
+
+@code {
+    private List<OuvrageDto>? ouvrages;
+    private List<AuteurDto>? auteurs;
+    private List<ExemplaireDto>? exemplaires;
+
+    // Modal ouvrage
+    private string titre = string.Empty;
+    private int auteurId;
+    private int nombreExemplaires = 1;
+    private string? erreurModal;
+    private bool afficherModal;
+    private bool enCours;
+
+    // Modal exemplaire
+    private int ouvrageExemplaireId;
+    private string? titreExemplaire;
+    private string etatDisponibilite = "Disponible";
+    private string? erreurModalExemplaire;
+    private bool afficherModalExemplaire;
+    private bool enCoursExemplaire;
+
+    private string? erreur;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ChargerAuteurs();
+        await Charger();
+    }
+
+    private string NomAuteur(int id)
+        => auteurs?.FirstOrDefault(a => a.Id == id) is { } a ? $"{a.Nom} {a.Prenom}" : $"#{id}";
+
+    private int Total(int ouvrageId)
+        => exemplaires?.Count(e => e.OuvrageId == ouvrageId) ?? 0;
+
+    private int Disponibles(int ouvrageId)
+        => exemplaires?.Count(e => e.OuvrageId == ouvrageId && e.EtatDisponibilite == "Disponible") ?? 0;
+
+    // --- Modal ouvrage ---
+    private void Ouvrir()
+    {
+        titre = string.Empty;
+        nombreExemplaires = 1;
+        if (auteurId == 0 && auteurs is { Count: > 0 }) auteurId = auteurs[0].Id;
+        erreurModal = null;
+        afficherModal = true;
+    }
+
+    private void Fermer() => afficherModal = false;
+
+    // --- Modal exemplaire ---
+    private void OuvrirExemplaire(OuvrageDto ouvrage)
+    {
+        ouvrageExemplaireId = ouvrage.Id;
+        titreExemplaire = ouvrage.Titre;
+        etatDisponibilite = "Disponible";
+        erreurModalExemplaire = null;
+        afficherModalExemplaire = true;
+    }
+
+    private void FermerExemplaire() => afficherModalExemplaire = false;
+
+    private async Task AjouterExemplaire()
+    {
+        enCoursExemplaire = true;
+        erreurModalExemplaire = null;
+        try
+        {
+            var command = new CreerExemplaireCommand(ouvrageExemplaireId, etatDisponibilite);
+            var reponse = await CreerExemplaireUseCase.ExecuteAsync(command);
+            if (reponse.IsSuccessStatusCode)
+            {
+                afficherModalExemplaire = false;
+                await Charger();
+            }
+            else
+            {
+                erreurModalExemplaire = $"Échec (HTTP {(int)reponse.StatusCode}).";
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            erreurModalExemplaire = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            erreurModalExemplaire = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            enCoursExemplaire = false;
+        }
+    }
+
+    // --- Chargements ---
+    private async Task ChargerAuteurs()
+    {
+        auteurs = await RecupereLesAuteursUseCase.ExecuteAsync();
+        if (auteurId == 0 && auteurs is { Count: > 0 })
+            auteurId = auteurs[0].Id;
+        auteurs ??= new();
+    }
+
+    private async Task Charger()
+    {
+        erreur = null;
+        ouvrages = await RecupereLesOuvragesUseCase.ExecuteAsync();
+        exemplaires = await RecupereLesExemplairesUseCase.ExecuteAsync();
+        ouvrages ??= new();
+        exemplaires ??= new();
+    }
+
+    private async Task Ajouter()
+    {
+        if (string.IsNullOrWhiteSpace(titre))
+        {
+            erreurModal = "Le titre est obligatoire.";
+            return;
+        }
+        if (auteurId <= 0)
+        {
+            erreurModal = "Sélectionne un auteur.";
+            return;
+        }
+
+        enCours = true;
+        erreurModal = null;
+        try
+        {
+            var command = new CreerOuvrageCommand(titre, auteurId, nombreExemplaires);
+            var reponse = await CreerOuvrageUseCase.ExecuteAsync(command);
+            if (reponse.IsSuccessStatusCode)
+            {
+                afficherModal = false;
+                await Charger();
+            }
+            else
+            {
+                erreurModal = $"Échec de la création (HTTP {(int)reponse.StatusCode}).";
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            erreurModal = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            erreurModal = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            enCours = false;
+        }
+    }
+}
