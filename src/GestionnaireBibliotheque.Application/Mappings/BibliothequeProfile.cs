@@ -1,6 +1,7 @@
 using AutoMapper;
 using GestionnaireBibliotheque.Application.DTOs.Responses;
 using GestionnaireBibliotheque.Domain.Entities;
+using GestionnaireBibliotheque.Domain.Enums;
 
 namespace GestionnaireBibliotheque.Application.Mappings;
 
@@ -19,6 +20,8 @@ public class BibliothequeProfile : Profile
             .ForCtorParam(nameof(MembreResponse.Email), opt => opt.MapFrom(s => s.Email == null ? null : s.Email.Valeur));
 
         CreateMap<Penalite, PenaliteResponse>()
-            .ForCtorParam(nameof(PenaliteResponse.Montant), opt => opt.MapFrom(s => s.Montant.Valeur));
+            .ForCtorParam(nameof(PenaliteResponse.Montant), opt => opt.MapFrom(s => s.Montant.Valeur))
+            .ForCtorParam(nameof(PenaliteResponse.EmpruntId), opt => opt.MapFrom(s => (int?)s.EmpruntId))
+            .ForCtorParam(nameof(PenaliteResponse.Statut), opt => opt.MapFrom(s => s.Statut));
     }
 }

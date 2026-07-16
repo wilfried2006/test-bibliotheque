@@ -15,4 +15,8 @@ public class PenalitesController(IPenaliteService service) : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PenaliteResponse>> GetById(int id, CancellationToken cancellationToken)
         => Ok(await service.GetByIdAsync(id, cancellationToken));
+
+    [HttpPost("{id:int}/payer")]
+    public async Task<IActionResult> MarquerPaye(int id, CancellationToken cancellationToken)
+        => await service.MarquerPayeAsync(id, cancellationToken) ? NoContent() : NotFound();
 }

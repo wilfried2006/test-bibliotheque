@@ -6,6 +6,8 @@ public record PenaliteDto(
     int ExemplaireId,
     int JoursRetard,
     decimal Montant,
-    DateTime DatePenalite);
+    DateTime DatePenalite,
+    int? EmpruntId,
+    string Statut);
 
 public record TotalPenalitesDto(int MembreId, decimal Total, decimal Plafond, bool Plafonne);

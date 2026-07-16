@@ -68,7 +68,7 @@ public class EmpruntService(
         decimal montantPenalite = 0m;
         if (emprunt.EtatEmprunt == EtatEmprunt.Retard)
         {
-            var penalite = Penalite.PourRetard(emprunt.MembreId, emprunt.ExemplaireId, emprunt.JoursRetard, dateEffective);
+            var penalite = Penalite.PourRetard(emprunt.MembreId, emprunt.ExemplaireId, emprunt.Id, emprunt.JoursRetard, dateEffective);
             montantPenalite = penalite.Montant.Valeur;
             await penaliteRepository.AddAsync(penalite, cancellationToken);
         }

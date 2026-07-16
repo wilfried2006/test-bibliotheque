@@ -51,6 +51,9 @@ public class BackApiService(HttpClient httpClient) : IBackApiService
     public async Task<TotalPenalitesDto?> RecupereLeTotalPenalitesMembreAsync(int membreId)
         => await GetAsync<TotalPenalitesDto>($"api/membres/{membreId}/penalites/total");
 
+    public async Task<HttpResponseMessage> MarquerPenalitePayeAsync(int penaliteId)
+        => await PostRawAsync($"api/penalites/{penaliteId}/payer", new { });
+
     private async Task<T?> GetAsync<T>(string endpoint)
     {
         try

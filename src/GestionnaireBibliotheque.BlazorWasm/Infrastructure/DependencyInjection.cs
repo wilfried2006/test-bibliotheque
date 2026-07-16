@@ -46,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<RecupereLespenalitesUseCase>();
         services.AddScoped<RecupereLePenalitesMembreUseCase>();
         services.AddScoped<RecupereLeTotalPenalitesMembreUseCase>();
+        services.AddScoped<MarquerPenalitePayeUseCase>();
 
         return services;
     }

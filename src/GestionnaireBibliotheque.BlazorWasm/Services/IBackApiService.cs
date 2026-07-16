@@ -32,4 +32,5 @@ public interface IBackApiService
     Task<List<PenaliteDto>?> RecupereLespenalitesAsync();
     Task<List<PenaliteDto>?> RecupereLePenalitesMembreAsync(int membreId);
     Task<TotalPenalitesDto?> RecupereLeTotalPenalitesMembreAsync(int membreId);
+    Task<HttpResponseMessage> MarquerPenalitePayeAsync(int penaliteId);
 }
