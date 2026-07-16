@@ -46,17 +46,16 @@ else
 
     <table class="table">
         <thead>
-            <tr><th>Id</th><th>Titre</th><th>Auteur</th><th>Exemplaires (dispo/total)</th><th></th></tr>
+            <tr><th>Titre</th><th>Auteur</th><th>Exemplaires (dispo/total)</th><th></th></tr>
         </thead>
         <tbody>
             @if (ouvrages.Count == 0)
             {
-                <tr><td colspan="5"><em>Aucun ouvrage.</em></td></tr>
+                <tr><td colspan="4"><em>Aucun ouvrage.</em></td></tr>
             }
             @foreach (var o in ouvrages)
             {
                 <tr>
-                    <td>@o.Id</td>
                     <td>@o.Titre</td>
                     <td>@NomAuteur(o.AuteurId)</td>
                     <td><span class="badge @(Disponibles(o.Id) > 0 ? "bg-success" : "bg-secondary")">@Disponibles(o.Id) / @Total(o.Id)</span></td>

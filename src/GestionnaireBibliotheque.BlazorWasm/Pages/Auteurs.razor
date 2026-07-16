@@ -25,16 +25,16 @@ else
 
     <table class="table">
         <thead>
-            <tr><th>Id</th><th>Nom</th><th>Prénom</th></tr>
+            <tr><th>Nom</th><th>Prénom</th></tr>
         </thead>
         <tbody>
             @if (auteurs.Count == 0)
             {
-                <tr><td colspan="3"><em>Aucun auteur.</em></td></tr>
+                <tr><td colspan="2"><em>Aucun auteur.</em></td></tr>
             }
             @foreach (var a in auteurs)
             {
-                <tr><td>@a.Id</td><td>@a.Nom</td><td>@a.Prenom</td></tr>
+                <tr><td>@a.Nom</td><td>@a.Prenom</td></tr>
             }
         </tbody>
     </table>

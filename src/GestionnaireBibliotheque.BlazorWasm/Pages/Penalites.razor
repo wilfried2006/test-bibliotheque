@@ -79,17 +79,16 @@ else
 
     <table class="table">
         <thead>
-            <tr><th>Id</th><th>Membre</th><th>Emprunt</th><th>Exemplaire</th><th>Jours de retard</th><th>Montant</th><th>Montant sans plafond</th><th>Statut</th><th></th></tr>
+            <tr><th>Membre</th><th>Emprunt</th><th>Exemplaire</th><th>Jours de retard</th><th>Montant</th><th>Montant sans plafond</th><th>Statut</th><th></th></tr>
         </thead>
         <tbody>
             @if (PenalitesAffichees.Count == 0)
             {
-                <tr><td colspan="9"><em>Aucune pénalité@(filtreMembreId > 0 ? " pour ce membre" : "").</em></td></tr>
+                <tr><td colspan="8"><em>Aucune pénalité@(filtreMembreId > 0 ? " pour ce membre" : "").</em></td></tr>
             }
             @foreach (var p in PenalitesAffichees)
             {
                 <tr>
-                    <td>@(p.Id == 0 ? "—" : p.Id.ToString())</td>
                     <td>@NomMembre(p.MembreId)</td>
                     <td>@(p.EmpruntId?.ToString() ?? "—")</td>
                     <td>@p.ExemplaireId</td>

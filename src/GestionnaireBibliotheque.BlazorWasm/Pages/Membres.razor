@@ -45,16 +45,16 @@ else
 
     <table class="table">
         <thead>
-            <tr><th>Id</th><th>Nom</th><th>Prénom</th><th>Email</th><th>Type d'adhérent</th></tr>
+            <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Type d'adhérent</th></tr>
         </thead>
         <tbody>
             @if (membres.Count == 0)
             {
-                <tr><td colspan="5"><em>Aucun membre.</em></td></tr>
+                <tr><td colspan="4"><em>Aucun membre.</em></td></tr>
             }
             @foreach (var m in membres)
             {
-                <tr><td>@m.Id</td><td>@m.Nom</td><td>@m.Prenom</td><td>@m.Email</td><td><span class="badge @ClasseType(m.TypeAdherentId)">@LibelleType(m.TypeAdherentId)</span></td></tr>
+                <tr><td>@m.Nom</td><td>@m.Prenom</td><td>@m.Email</td><td><span class="badge @ClasseType(m.TypeAdherentId)">@LibelleType(m.TypeAdherentId)</span></td></tr>
             }
         </tbody>
     </table>
