@@ -35,5 +35,20 @@ services:
       - "8080:8080"
     restart: unless-stopped
 
+  blazor:
+    build:
+      context: .
+      dockerfile: src/GestionnaireBibliotheque.BlazorWasm/Dockerfile
+      args:
+        # URL de l'API que le navigateur doit joindre (API publiée sur l'hôte).
+        API_BASE_URL: "http://localhost:8080/"
+    container_name: bibliotheque-blazor
+    depends_on:
+      - api
+    # Servi sur 5024 = origine déjà autorisée par le CORS de l'API.
+    ports:
+      - "5024:80"
+    restart: unless-stopped
+
 volumes:
   sqlserver-data:
