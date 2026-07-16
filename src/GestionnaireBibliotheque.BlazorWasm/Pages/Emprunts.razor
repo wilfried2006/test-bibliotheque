@@ -31,7 +31,35 @@
 }
 else
 {
-    <button class="btn btn-primary mb-3" @onclick="Ouvrir">+ Nouvel emprunt</button>
+    <div class="d-flex align-items-end gap-3 mb-3 flex-wrap">
+        <button class="btn btn-primary" @onclick="Ouvrir">+ Nouvel emprunt</button>
+
+        <div>
+            <label class="form-label mb-0">Filtrer par membre</label>
+            <select class="form-select" @bind="filtreMembreId">
+                <option value="0">Tous les membres</option>
+                @if (membres is not null)
+                {
+                    @foreach (var m in membres)
+                    {
+                        <option value="@m.Id">@m.Nom @m.Prenom (#@m.Id)</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class="form-label mb-0">Filtrer par état</label>
+            <select class="form-select" @bind="filtreEtat">
+                <option value="">Tous les états</option>
+                <option value="Actif">Actif</option>
+                <option value="Cloture">Clôturé</option>
+                <option value="Retard">En retard</option>
+            </select>
+        </div>
+
+        <span class="text-muted">@EmpruntsAffiches.Count emprunt(s) affiché(s)</span>
+    </div>
 
     <table class="table">
         <thead>
@@ -40,15 +68,15 @@ else
             </tr>
         </thead>
         <tbody>
-            @if (emprunts.Count == 0)
+            @if (EmpruntsAffiches.Count == 0)
             {
                 <tr>
                     <td colspan="8">
-                        <em>Aucun emprunt.</em>
+                        <em>Aucun emprunt@(filtreMembreId > 0 ? " pour ce membre" : "").</em>
                     </td>
                 </tr>
             }
-            @foreach (var e in emprunts)
+            @foreach (var e in EmpruntsAffiches)
             {
                 <tr>
                     <td>@LibelleExemplaire(e.ExemplaireId)</td>
@@ -118,6 +146,8 @@ else
 
     private int ouvrageId;
     private int membreId;
+    private int filtreMembreId; // 0 = tous les membres
+    private string filtreEtat = ""; // "" = tous les états
     private string? message;
     private string? erreur;
     private string? erreurModal;
@@ -126,6 +156,20 @@ else
 
     private List<OuvrageDto> OuvragesDisponibles
         => ouvrages?.Where(o => Disponibles(o.Id) > 0).ToList() ?? new();
+
+    // Liste filtrée par membre (0 = tous) et par état ("" = tous).
+    private List<EmpruntDto> EmpruntsAffiches
+    {
+        get
+        {
+            IEnumerable<EmpruntDto> q = emprunts ?? new();
+            if (filtreMembreId > 0)
+                q = q.Where(e => e.MembreId == filtreMembreId);
+            if (!string.IsNullOrEmpty(filtreEtat))
+                q = q.Where(e => e.EtatEmprunt == filtreEtat);
+            return q.ToList();
+        }
+    }
 
     private bool SaveDesactive
         => OuvragesDisponibles.Count == 0 || membres is not { Count: > 0 } || ouvrageId <= 0 || membreId <= 0;

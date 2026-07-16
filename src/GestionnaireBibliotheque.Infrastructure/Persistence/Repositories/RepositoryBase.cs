@@ -7,7 +7,7 @@ namespace GestionnaireBibliotheque.Infrastructure.Persistence.Repositories;
 
 /// <summary>
 /// Base des repositories : traduit entre entités du Domain et entités EF (Data).
-/// Les lectures renvoient des entités détachées ; les écritures ré-attachent via ToData.
+/// Les lectures sont sans suivi (AsNoTracking) ; les écritures ré-attachent via ToData.
 /// </summary>
 public abstract class RepositoryBase<TDomain, TData, TKey>(BibliothequeContext context) : IRepository<TDomain, TKey>
     where TDomain : class
@@ -24,13 +24,11 @@ public abstract class RepositoryBase<TDomain, TData, TKey>(BibliothequeContext c
 
     public virtual async Task<TDomain?> GetByIdAsync(TKey id, CancellationToken cancellationToken = default)
     {
-        var data = await Set.FindAsync([id], cancellationToken);
-        if (data is null)
-            return null;
-
-        var domain = ToDomain(data);
-        Context.Entry(data).State = EntityState.Detached; // les écritures ré-attacheront un Data neuf
-        return domain;
+        // Lecture SANS suivi : évite que le détachement d'une entité liée (ex. exemplaire)
+        // ne cascade-détache une entité déjà marquée Modified (ex. emprunt) via la relation FK.
+        var data = await Set.AsNoTracking()
+            .FirstOrDefaultAsync(e => EF.Property<TKey>(e, "Id")!.Equals(id), cancellationToken);
+        return data is null ? null : ToDomain(data);
     }
 
     public virtual async Task<IReadOnlyList<TDomain>> ListAsync(CancellationToken cancellationToken = default)

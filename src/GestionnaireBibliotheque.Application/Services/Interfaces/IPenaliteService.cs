@@ -4,6 +4,12 @@ namespace GestionnaireBibliotheque.Application.Services;
 
 public interface IPenaliteService
 {
+    /// <summary>Liste toutes les pénalités.</summary>
+    Task<IReadOnlyList<PenaliteResponse>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Récupère une pénalité par son identifiant, ou <c>null</c> si introuvable.</summary>
+    Task<PenaliteResponse?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+
     /// <summary>Liste les pénalités d'un membre.</summary>
     Task<IReadOnlyList<PenaliteResponse>> GetByMembreAsync(int membreId, CancellationToken cancellationToken = default);
 

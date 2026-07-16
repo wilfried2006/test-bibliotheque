@@ -43,7 +43,7 @@
     {
         <table class="table">
             <thead>
-                <tr><th>Id</th><th>Membre</th><th>Exemplaire</th><th>Jours de retard</th><th>Montant</th><th>Date</th></tr>
+                <tr><th>Id</th><th>Membre</th><th>Exemplaire</th><th>Jours de retard</th><th>Montant</th><th>Montant sans plafond</th><th>Date</th></tr>
             </thead>
             <tbody>
                 @foreach (var p in toutesLesPenalites)
@@ -53,6 +53,7 @@
                         <td>@NomMembre(p.MembreId)</td>
                         <td>@p.ExemplaireId</td>
                         <td>@p.JoursRetard</td>
+                        <td>@Plafonne(p.Montant).ToString("0.00") €</td>
                         <td>@p.Montant.ToString("0.00") €</td>
                         <td>@p.DatePenalite.ToString("yyyy-MM-dd")</td>
                     </tr>
@@ -99,12 +100,12 @@ else if (activeTab == "by-member")
     {
         <table class="table">
             <thead>
-                <tr><th>Id</th><th>Exemplaire</th><th>Jours de retard</th><th>Montant</th><th>Date</th></tr>
+                <tr><th>Id</th><th>Exemplaire</th><th>Jours de retard</th><th>Montant</th><th>Montant sans plafond</th><th>Date</th></tr>
             </thead>
             <tbody>
                 @if (penalites.Count == 0)
                 {
-                    <tr><td colspan="5"><em>Aucune pénalité pour ce membre.</em></td></tr>
+                    <tr><td colspan="6"><em>Aucune pénalité pour ce membre.</em></td></tr>
                 }
                 @foreach (var p in penalites)
                 {
@@ -112,6 +113,7 @@ else if (activeTab == "by-member")
                         <td>@p.Id</td>
                         <td>@p.ExemplaireId</td>
                         <td>@p.JoursRetard</td>
+                        <td>@Plafonne(p.Montant).ToString("0.00") €</td>
                         <td>@p.Montant.ToString("0.00") €</td>
                         <td>@p.DatePenalite.ToString("yyyy-MM-dd")</td>
                     </tr>
@@ -130,6 +132,9 @@ else if (activeTab == "by-member")
     private List<PenaliteDto>? penalites;
     private string? erreur;
     private bool enCours;
+
+    private const decimal PlafondMontant = 10.00m; // plafond d'affichage par pénalité
+    private static decimal Plafonne(decimal montant) => Math.Min(montant, PlafondMontant);
 
     protected override async Task OnInitializedAsync()
     {

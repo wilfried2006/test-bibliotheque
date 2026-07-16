@@ -85,9 +85,14 @@ else
     <p class="text-muted">Le code-barre est généré automatiquement.</p>
 
     <label class="form-label mb-0">État</label>
-    <select class="form-select" @bind="etatDisponibilite">
-        <option value="Disponible">Disponible</option>
-        <option value="Emprunte">Emprunté</option>
+    <input class="form-control mb-2" value="Disponible" disabled />
+
+    <label class="form-label mb-0">Nombre d'exemplaires à ajouter</label>
+    <select class="form-select" @bind="quantiteExemplaires">
+        @for (var n = 1; n <= 20; n++)
+        {
+            <option value="@n">@n</option>
+        }
     </select>
 </ModalForm>
 
@@ -107,7 +112,7 @@ else
     // Modal exemplaire
     private int ouvrageExemplaireId;
     private string? titreExemplaire;
-    private string etatDisponibilite = "Disponible";
+    private int quantiteExemplaires = 1;
     private string? erreurModalExemplaire;
     private bool afficherModalExemplaire;
     private bool enCoursExemplaire;
@@ -146,7 +151,7 @@ else
     {
         ouvrageExemplaireId = ouvrage.Id;
         titreExemplaire = ouvrage.Titre;
-        etatDisponibilite = "Disponible";
+        quantiteExemplaires = 1;
         erreurModalExemplaire = null;
         afficherModalExemplaire = true;
     }
@@ -159,17 +164,23 @@ else
         erreurModalExemplaire = null;
         try
         {
-            var command = new CreerExemplaireCommand(ouvrageExemplaireId, etatDisponibilite);
-            var reponse = await CreerExemplaireUseCase.ExecuteAsync(command);
-            if (reponse.IsSuccessStatusCode)
+            var crees = 0;
+            for (var i = 0; i < quantiteExemplaires; i++)
             {
+                var command = new CreerExemplaireCommand(ouvrageExemplaireId, "Disponible");
+                var reponse = await CreerExemplaireUseCase.ExecuteAsync(command);
+                if (!reponse.IsSuccessStatusCode)
+                {
+                    erreurModalExemplaire = $"Échec après {crees} exemplaire(s) créé(s) (HTTP {(int)reponse.StatusCode}).";
+                    break;
+                }
+                crees++;
+            }
+
+            if (erreurModalExemplaire is null)
                 afficherModalExemplaire = false;
-                await Charger();
-            }
-            else
-            {
-                erreurModalExemplaire = $"Échec (HTTP {(int)reponse.StatusCode}).";
-            }
+
+            await Charger();
         }
         catch (ArgumentException ex)
         {
