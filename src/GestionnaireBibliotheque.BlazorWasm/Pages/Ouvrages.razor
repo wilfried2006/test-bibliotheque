@@ -23,9 +23,24 @@
 }
 else
 {
-    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+    <div class="d-flex align-items-end gap-3 mb-3 flex-wrap">
         <button class="btn btn-primary" @onclick="Ouvrir">+ Ajouter un ouvrage</button>
-        <span class="text-muted">@ouvrages.Count ouvrage(s)</span>
+
+        @if (auteurs is { Count: > 0 })
+        {
+            <div>
+                <label class="form-label mb-0">Filtrer par auteur</label>
+                <select class="form-select" @bind="filtreAuteurId">
+                    <option value="0">Tous les auteurs</option>
+                    @foreach (var a in auteurs.OrderBy(a => a.Nom).ThenBy(a => a.Prenom))
+                    {
+                        <option value="@a.Id">@a.Nom @a.Prenom</option>
+                    }
+                </select>
+            </div>
+        }
+
+        <span class="text-muted">@OuvragesAffiches.Count ouvrage(s)</span>
     </div>
 
     <div class="card mb-3">
@@ -49,11 +64,11 @@ else
             <tr><th>Titre</th><th>Auteur</th><th>Exemplaires (dispo/total)</th><th></th></tr>
         </thead>
         <tbody>
-            @if (ouvrages.Count == 0)
+            @if (OuvragesAffiches.Count == 0)
             {
-                <tr><td colspan="4"><em>Aucun ouvrage.</em></td></tr>
+                <tr><td colspan="4"><em>Aucun ouvrage@(filtreAuteurId != 0 ? " pour cet auteur" : "").</em></td></tr>
             }
-            @foreach (var o in ouvrages)
+            @foreach (var o in OuvragesAffiches)
             {
                 <tr>
                     <td>@o.Titre</td>
@@ -118,6 +133,13 @@ else
     private List<OuvrageDto>? ouvrages;
     private List<AuteurDto>? auteurs;
     private List<ExemplaireDto>? exemplaires;
+    private int filtreAuteurId; // 0 = tous les auteurs
+
+    // Liste filtrée par auteur (0 = tous).
+    private List<OuvrageDto> OuvragesAffiches
+        => filtreAuteurId == 0
+            ? ouvrages ?? new()
+            : (ouvrages ?? new()).Where(o => o.AuteurId == filtreAuteurId).ToList();
 
     // Modal ouvrage
     private string titre = string.Empty;

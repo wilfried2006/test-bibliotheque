@@ -19,9 +19,24 @@
 }
 else
 {
-    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+    <div class="d-flex align-items-end gap-3 mb-3 flex-wrap">
         <button class="btn btn-primary" @onclick="Ouvrir">+ Ajouter un membre</button>
-        <span class="text-muted">@membres.Count membre(s)</span>
+
+        @if (types is { Count: > 0 })
+        {
+            <div>
+                <label class="form-label mb-0">Filtrer par type</label>
+                <select class="form-select" @bind="filtreTypeId">
+                    <option value="0">Tous les types</option>
+                    @foreach (var t in types)
+                    {
+                        <option value="@t.Id">@t.Libelle</option>
+                    }
+                </select>
+            </div>
+        }
+
+        <span class="text-muted">@MembresAffiches.Count membre(s)</span>
     </div>
 
     @if (types is { Count: > 0 })
@@ -48,11 +63,11 @@ else
             <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Type d'adhérent</th></tr>
         </thead>
         <tbody>
-            @if (membres.Count == 0)
+            @if (MembresAffiches.Count == 0)
             {
-                <tr><td colspan="4"><em>Aucun membre.</em></td></tr>
+                <tr><td colspan="4"><em>Aucun membre@(filtreTypeId != 0 ? " pour ce type" : "").</em></td></tr>
             }
-            @foreach (var m in membres)
+            @foreach (var m in MembresAffiches)
             {
                 <tr><td>@m.Nom</td><td>@m.Prenom</td><td>@m.Email</td><td><span class="badge @ClasseType(m.TypeAdherentId)">@LibelleType(m.TypeAdherentId)</span></td></tr>
             }
@@ -90,10 +105,17 @@ else
     private string prenom = string.Empty;
     private string email = string.Empty;
     private int typeAdherentId;
+    private byte filtreTypeId; // 0 = tous les types
     private string? erreur;
     private string? erreurModal;
     private bool afficherModal;
     private bool enCours;
+
+    // Liste filtrée par type d'adhérent (0 = tous).
+    private List<MembreDto> MembresAffiches
+        => filtreTypeId == 0
+            ? membres ?? new()
+            : (membres ?? new()).Where(m => m.TypeAdherentId == filtreTypeId).ToList();
 
     protected override async Task OnInitializedAsync()
     {
