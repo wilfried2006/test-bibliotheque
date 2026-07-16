@@ -1,0 +1,15 @@
+# Surcharge locale pour Apple Silicon (arm64).
+# L'image SQL Server 2022 est amd64 uniquement et crashe (segfault) sous QEMU sur Mac ARM.
+# Azure SQL Edge fournit un build arm64 natif, compatible TDS/T-SQL pour EF Core.
+# Ce fichier est fusionné automatiquement par `docker compose` en local ;
+# le docker-compose.yml principal reste sur SQL Server 2022 pour CI/prod amd64.
+services:
+  sqlserver:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    platform: linux/arm64/v8
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/localhost/1433' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
