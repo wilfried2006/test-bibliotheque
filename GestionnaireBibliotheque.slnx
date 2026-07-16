@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GestionnaireBibliotheque.API/GestionnaireBibliotheque.API.csproj" />
+    <Project Path="src/GestionnaireBibliotheque.Application/GestionnaireBibliotheque.Application.csproj" />
+    <Project Path="src/GestionnaireBibliotheque.BlazorWasm/GestionnaireBibliotheque.BlazorWasm.csproj" />
+    <Project Path="src/GestionnaireBibliotheque.Domain/GestionnaireBibliotheque.Domain.csproj" />
+    <Project Path="src/GestionnaireBibliotheque.Infrastructure/GestionnaireBibliotheque.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GestionnaireBibliotheque.Tests.Unit/GestionnaireBibliotheque.Tests.Unit.csproj" />
+  </Folder>
+</Solution>
