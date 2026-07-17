@@ -1,0 +1,209 @@
+@page "/membres"
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Membres
+@inject RecupereLesMembreUseCase RecupereLesMembreUseCase
+@inject RecupereLesTypesAdherentUseCase RecupereLesTypesAdherentUseCase
+@inject CreerMembreUseCase CreerMembreUseCase
+
+<PageTitle>Membres</PageTitle>
+
+<h1>Membres</h1>
+
+@if (erreur is not null)
+{
+    <div class="alert alert-danger">@erreur</div>
+}
+
+@if (membres is null)
+{
+    <p><em>Chargement…</em></p>
+}
+else
+{
+    <div class="d-flex align-items-end gap-3 mb-3 flex-wrap">
+        <button class="btn btn-primary" @onclick="Ouvrir">+ Ajouter un membre</button>
+
+        @if (types is { Count: > 0 })
+        {
+            <div>
+                <label class="form-label mb-0">Filtrer par type</label>
+                <select class="form-select" @bind="filtreTypeId">
+                    <option value="0">Tous les types</option>
+                    @foreach (var t in types)
+                    {
+                        <option value="@t.Id">@t.Libelle</option>
+                    }
+                </select>
+            </div>
+        }
+
+        <span class="text-muted">@MembresAffiches.Count membre(s)</span>
+    </div>
+
+    @if (types is { Count: > 0 })
+    {
+        <div class="card mb-3">
+            <div class="card-body py-2">
+                <h6 class="card-title mb-2">Types d'adhérent</h6>
+                <ul class="list-unstyled small mb-0">
+                    @foreach (var t in types)
+                    {
+                        <li class="mb-1">
+                            <span class="badge @ClasseType(t.Id)">@t.Libelle</span>
+                            — jusqu'à <strong>@t.NombreOuvragesMax ouvrage(s)</strong> empruntable(s) simultanément,
+                            durée d'emprunt <strong>@t.DureeEmpruntJours jour(s)</strong>.
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+
+    <table class="table">
+        <thead>
+            <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Type d'adhérent</th></tr>
+        </thead>
+        <tbody>
+            @if (MembresAffiches.Count == 0)
+            {
+                <tr><td colspan="4"><em>Aucun membre@(filtreTypeId != 0 ? " pour ce type" : "").</em></td></tr>
+            }
+            @foreach (var m in MembresAffiches)
+            {
+                <tr><td>@m.Nom</td><td>@m.Prenom</td><td>@m.Email</td><td><span class="badge @ClasseType(m.TypeAdherentId)">@LibelleType(m.TypeAdherentId)</span></td></tr>
+            }
+        </tbody>
+    </table>
+}
+
+<ModalForm Title="Nouveau membre" Visible="afficherModal" Error="@erreurModal"
+           Saving="enCours" SaveDisabled="@(types is not { Count: > 0 })" OnSave="Ajouter" OnCancel="Fermer">
+    <input class="form-control mb-2" @bind="nom" placeholder="Nom" />
+    <input class="form-control mb-2" @bind="prenom" placeholder="Prénom" />
+    <input class="form-control mb-2" @bind="email" placeholder="Email (optionnel)" />
+
+    <label class="form-label mb-0">Type d'adhérent</label>
+    @if (types is { Count: > 0 })
+    {
+        <select class="form-select" @bind="typeAdherentId">
+            <option value="0" disabled>-- Choisir un type --</option>
+            @foreach (var t in types)
+            {
+                <option value="@t.Id">@t.Libelle (max @t.NombreOuvragesMax ouvrages, @t.DureeEmpruntJours j)</option>
+            }
+        </select>
+    }
+    else
+    {
+        <div class="alert alert-warning mb-0">Aucun type d'adhérent disponible.</div>
+    }
+</ModalForm>
+
+@code {
+    private List<MembreDto>? membres;
+    private List<TypeAdherentDto>? types;
+    private string nom = string.Empty;
+    private string prenom = string.Empty;
+    private string email = string.Empty;
+    private int typeAdherentId;
+    private byte filtreTypeId; // 0 = tous les types
+    private string? erreur;
+    private string? erreurModal;
+    private bool afficherModal;
+    private bool enCours;
+
+    // Liste filtrée par type d'adhérent (0 = tous).
+    private List<MembreDto> MembresAffiches
+        => filtreTypeId == 0
+            ? membres ?? new()
+            : (membres ?? new()).Where(m => m.TypeAdherentId == filtreTypeId).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ChargerTypes();
+        await Charger();
+    }
+
+    private string LibelleType(byte id)
+        => types?.FirstOrDefault(t => t.Id == id)?.Libelle ?? $"#{id}";
+
+    // Une couleur distincte par type d'adhérent (indexée sur la liste chargée).
+    private static readonly string[] PaletteTypes =
+    {
+        "bg-primary", "bg-success", "bg-danger", "bg-warning text-dark",
+        "bg-info text-dark", "bg-secondary", "bg-dark"
+    };
+
+    private string ClasseType(byte id)
+    {
+        var index = types?.FindIndex(t => t.Id == id) ?? -1;
+        return index >= 0 ? PaletteTypes[index % PaletteTypes.Length] : "bg-secondary";
+    }
+
+    private void Ouvrir()
+    {
+        nom = prenom = email = string.Empty;
+        if (typeAdherentId == 0 && types is { Count: > 0 }) typeAdherentId = types[0].Id;
+        erreurModal = null;
+        afficherModal = true;
+    }
+
+    private void Fermer() => afficherModal = false;
+
+    private async Task ChargerTypes()
+    {
+        types = await RecupereLesTypesAdherentUseCase.ExecuteAsync();
+        if (typeAdherentId == 0 && types is { Count: > 0 })
+            typeAdherentId = types[0].Id;
+        types ??= new();
+    }
+
+    private async Task Charger()
+    {
+        erreur = null;
+        membres = await RecupereLesMembreUseCase.ExecuteAsync();
+        membres ??= new();
+    }
+
+    private async Task Ajouter()
+    {
+        if (string.IsNullOrWhiteSpace(nom) || string.IsNullOrWhiteSpace(prenom))
+        {
+            erreurModal = "Nom et prénom sont obligatoires.";
+            return;
+        }
+        if (typeAdherentId <= 0)
+        {
+            erreurModal = "Sélectionne un type d'adhérent.";
+            return;
+        }
+
+        enCours = true;
+        erreurModal = null;
+        try
+        {
+            var command = new CreerMembreCommand(nom, prenom, email, (byte)typeAdherentId);
+            var reponse = await CreerMembreUseCase.ExecuteAsync(command);
+            if (reponse.IsSuccessStatusCode)
+            {
+                afficherModal = false;
+                await Charger();
+            }
+            else
+            {
+                erreurModal = $"Échec de la création (HTTP {(int)reponse.StatusCode}).";
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            erreurModal = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            erreurModal = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            enCours = false;
+        }
+    }
+}

@@ -1,0 +1,113 @@
+@page "/auteurs"
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Auteurs
+@inject RecupereLesAuteursUseCase RecupereLesAuteursUseCase
+@inject CreerAuteurUseCase CreerAuteurUseCase
+
+<PageTitle>Auteurs</PageTitle>
+
+<h1>Auteurs</h1>
+
+@if (erreur is not null)
+{
+    <div class="alert alert-danger">@erreur</div>
+}
+
+@if (auteurs is null)
+{
+    <p><em>Chargement…</em></p>
+}
+else
+{
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <button class="btn btn-primary" @onclick="Ouvrir">+ Ajouter un auteur</button>
+        <span class="text-muted">@auteurs.Count auteur(s)</span>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr><th>Nom</th><th>Prénom</th></tr>
+        </thead>
+        <tbody>
+            @if (auteurs.Count == 0)
+            {
+                <tr><td colspan="2"><em>Aucun auteur.</em></td></tr>
+            }
+            @foreach (var a in auteurs)
+            {
+                <tr><td>@a.Nom</td><td>@a.Prenom</td></tr>
+            }
+        </tbody>
+    </table>
+}
+
+<ModalForm Title="Nouvel auteur" Visible="afficherModal" Error="@erreurModal"
+           Saving="enCours" OnSave="Ajouter" OnCancel="Fermer">
+    <input class="form-control mb-2" @bind="nom" placeholder="Nom" />
+    <input class="form-control mb-2" @bind="prenom" placeholder="Prénom" />
+</ModalForm>
+
+@code {
+    private List<AuteurDto>? auteurs;
+    private string nom = string.Empty;
+    private string prenom = string.Empty;
+    private string? erreur;
+    private string? erreurModal;
+    private bool afficherModal;
+    private bool enCours;
+
+    protected override Task OnInitializedAsync() => Charger();
+
+    private void Ouvrir()
+    {
+        nom = prenom = string.Empty;
+        erreurModal = null;
+        afficherModal = true;
+    }
+
+    private void Fermer() => afficherModal = false;
+
+    private async Task Charger()
+    {
+        erreur = null;
+        auteurs = await RecupereLesAuteursUseCase.ExecuteAsync();
+        auteurs ??= new();
+    }
+
+    private async Task Ajouter()
+    {
+        if (string.IsNullOrWhiteSpace(nom) || string.IsNullOrWhiteSpace(prenom))
+        {
+            erreurModal = "Nom et prénom sont obligatoires.";
+            return;
+        }
+
+        enCours = true;
+        erreurModal = null;
+        try
+        {
+            var command = new CreerAuteurCommand(nom, prenom);
+            var reponse = await CreerAuteurUseCase.ExecuteAsync(command);
+            if (reponse.IsSuccessStatusCode)
+            {
+                afficherModal = false;
+                await Charger();
+            }
+            else
+            {
+                erreurModal = $"Échec de la création (HTTP {(int)reponse.StatusCode}).";
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            erreurModal = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            erreurModal = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            enCours = false;
+        }
+    }
+}

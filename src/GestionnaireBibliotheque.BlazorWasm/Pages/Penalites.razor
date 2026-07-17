@@ -1,0 +1,297 @@
+@page "/penalites"
+@using GestionnaireBibliotheque.BlazorWasm.Models
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Membres
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Penalites
+@using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Emprunts
+@inject RecupereLesMembreUseCase RecupereLesMembreUseCase
+@inject RecupereLespenalitesUseCase RecupereLespenalitesUseCase
+@inject MarquerPenalitePayeUseCase MarquerPenalitePayeUseCase
+@inject RecupereLesEmpruntUseCase RecupereLesEmpruntUseCase
+
+<PageTitle>Pénalités</PageTitle>
+
+<h1>Pénalités</h1>
+
+@if (message is not null)
+{
+    <div class="alert alert-success">@message</div>
+}
+@if (erreur is not null)
+{
+    <div class="alert alert-danger">@erreur</div>
+}
+
+@if (toutesLesPenalites is null)
+{
+    <p><em>Chargement…</em></p>
+}
+else
+{
+    <div class="d-flex align-items-end gap-3 mb-3 flex-wrap">
+        <div>
+            <label class="form-label mb-0">Filtrer par membre</label>
+            <select class="form-select" @bind="filtreMembreId">
+                <option value="0">Tous les membres</option>
+                @if (membres is not null)
+                {
+                    @foreach (var m in membres)
+                    {
+                        <option value="@m.Id">@m.Nom @m.Prenom (#@m.Id)</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class="form-label mb-0">Filtrer par statut</label>
+            <select class="form-select" @bind="filtreStatut">
+                <option value="">Tous les statuts</option>
+                <option value="EnCours">En cours</option>
+                <option value="APayer">À payer</option>
+                <option value="Paye">Payé</option>
+            </select>
+        </div>
+
+        <span class="text-muted">@PenalitesAffichees.Count pénalité(s) affichée(s)</span>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <h6 class="card-title mb-2">Signification des statuts</h6>
+            <ul class="list-unstyled small mb-0">
+                <li class="mb-1">
+                    <span class="badge @ClasseStatut("EnCours")">En cours</span>
+                    — l'exemplaire n'a pas encore été rendu et l'emprunt est hors délai. Le montant
+                    s'accumule et est <strong>calculé à la volée</strong> (pénalité non encore enregistrée).
+                </li>
+                <li class="mb-1">
+                    <span class="badge @ClasseStatut("APayer")">À payer</span>
+                    — l'exemplaire a été rendu en retard. La pénalité est <strong>enregistrée et due</strong>,
+                    en attente de règlement.
+                </li>
+                <li>
+                    <span class="badge @ClasseStatut("Paye")">Payé</span>
+                    — la pénalité a été <strong>réglée</strong>.
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr><th>Membre</th><th>Emprunt</th><th>Exemplaire</th><th>Jours de retard</th><th>Montant</th><th>Montant sans plafond</th><th>Statut</th><th></th></tr>
+        </thead>
+        <tbody>
+            @if (PenalitesAffichees.Count == 0)
+            {
+                <tr><td colspan="8"><em>Aucune pénalité@(filtreMembreId > 0 ? " pour ce membre" : "").</em></td></tr>
+            }
+            @foreach (var p in PenalitesAffichees)
+            {
+                <tr>
+                    <td>@NomMembre(p.MembreId)</td>
+                    <td>@(p.EmpruntId?.ToString() ?? "—")</td>
+                    <td>@p.ExemplaireId</td>
+                    <td>@p.JoursRetard</td>
+                    <td>@Plafonne(p.Montant).ToString("0.00") €</td>
+                    <td>@p.Montant.ToString("0.00") €</td>
+                    <td><span class="badge @ClasseStatut(p.Statut)">@LibelleStatut(p.Statut)</span></td>
+                    <td>
+                        @if (p.EmpruntId is int eid)
+                        {
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => VoirEmprunt(eid)">
+                                Voir l'emprunt
+                            </button>
+                        }
+                        @if (p.Statut == "APayer" && p.Id != 0)
+                        {
+                            <button class="btn btn-sm btn-success" @onclick="() => Payer(p.Id)" disabled="@enCours">
+                                Marquer payé
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (afficherEmpruntModal && empruntAffiche is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Emprunt #@empruntAffiche.Id</h5>
+                    <button type="button" class="btn-close" @onclick="FermerEmprunt"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row mb-0">
+                        <dt class="col-5">Membre</dt>
+                        <dd class="col-7">@NomMembre(empruntAffiche.MembreId)</dd>
+                        <dt class="col-5">Exemplaire</dt>
+                        <dd class="col-7">#@empruntAffiche.ExemplaireId</dd>
+                        <dt class="col-5">Date d'emprunt</dt>
+                        <dd class="col-7">@empruntAffiche.DateEmprunt.ToString("yyyy-MM-dd")</dd>
+                        <dt class="col-5">Échéance</dt>
+                        <dd class="col-7">@empruntAffiche.DateRetourPrevue.ToString("yyyy-MM-dd")</dd>
+                        <dt class="col-5">Retour réel</dt>
+                        <dd class="col-7">@(empruntAffiche.DateRetourReel?.ToString("yyyy-MM-dd") ?? "—")</dd>
+                        <dt class="col-5">État</dt>
+                        <dd class="col-7">@EtatEmpruntLisible(empruntAffiche.EtatEmprunt)</dd>
+                    </dl>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-outline-primary" href="emprunts">Aller aux emprunts</a>
+                    <button class="btn btn-secondary" @onclick="FermerEmprunt">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+else if (empruntIntrouvable is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Emprunt #@empruntIntrouvable</h5>
+                    <button type="button" class="btn-close" @onclick="FermerEmprunt"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning mb-0">Emprunt introuvable (il a peut-être été supprimé).</div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="FermerEmprunt">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<MembreDto>? membres;
+    private List<PenaliteDto>? toutesLesPenalites;
+    private int filtreMembreId; // 0 = tous les membres
+    private string filtreStatut = ""; // "" = tous les statuts
+    private string? message;
+    private string? erreur;
+    private bool enCours;
+
+    private List<EmpruntDto>? emprunts;
+    private EmpruntDto? empruntAffiche;
+    private int? empruntIntrouvable;
+    private bool afficherEmpruntModal;
+
+    private const decimal PlafondMontant = 10.00m; // plafond d'affichage par pénalité
+    private static decimal Plafonne(decimal montant) => Math.Min(montant, PlafondMontant);
+
+    // Liste filtrée par membre (0 = tous) et par statut ("" = tous).
+    private List<PenaliteDto> PenalitesAffichees
+    {
+        get
+        {
+            IEnumerable<PenaliteDto> q = toutesLesPenalites ?? new();
+            if (filtreMembreId > 0)
+                q = q.Where(p => p.MembreId == filtreMembreId);
+            if (!string.IsNullOrEmpty(filtreStatut))
+                q = q.Where(p => p.Statut == filtreStatut);
+            return q.ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ChargerToutesPenalites();
+        await ChargerMembres();
+        await ChargerEmprunts();
+    }
+
+    private async Task ChargerEmprunts()
+    {
+        emprunts = await RecupereLesEmpruntUseCase.ExecuteAsync();
+        emprunts ??= new();
+    }
+
+    private async Task ChargerToutesPenalites()
+    {
+        toutesLesPenalites = await RecupereLespenalitesUseCase.ExecuteAsync();
+        toutesLesPenalites ??= new();
+    }
+
+    private async Task ChargerMembres()
+    {
+        membres = await RecupereLesMembreUseCase.ExecuteAsync();
+        membres ??= new();
+    }
+
+    private async Task Payer(int id)
+    {
+        enCours = true;
+        message = null;
+        erreur = null;
+        try
+        {
+            var reponse = await MarquerPenalitePayeUseCase.ExecuteAsync(id);
+            if (reponse.IsSuccessStatusCode)
+            {
+                message = $"Pénalité {id} marquée comme payée.";
+                await ChargerToutesPenalites();
+            }
+            else
+            {
+                erreur = $"Échec du paiement (HTTP {(int)reponse.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            erreur = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            enCours = false;
+        }
+    }
+
+    private void VoirEmprunt(int empruntId)
+    {
+        empruntAffiche = emprunts?.FirstOrDefault(e => e.Id == empruntId);
+        empruntIntrouvable = empruntAffiche is null ? empruntId : null;
+        afficherEmpruntModal = empruntAffiche is not null;
+    }
+
+    private void FermerEmprunt()
+    {
+        afficherEmpruntModal = false;
+        empruntAffiche = null;
+        empruntIntrouvable = null;
+    }
+
+    private string NomMembre(int id)
+        => membres?.FirstOrDefault(m => m.Id == id) is { } m ? $"{m.Nom} {m.Prenom}" : $"#{id}";
+
+    private static string EtatEmpruntLisible(string etat) => etat switch
+    {
+        "Cloture" => "Clôturé",
+        "Retard" => "En retard",
+        _ => etat // Actif
+    };
+
+    private static string LibelleStatut(string statut) => statut switch
+    {
+        "EnCours" => "En cours",
+        "APayer" => "À payer",
+        "Paye" => "Payé",
+        _ => statut
+    };
+
+    private static string ClasseStatut(string statut) => statut switch
+    {
+        "EnCours" => "bg-warning text-dark",
+        "APayer" => "bg-danger",
+        "Paye" => "bg-success",
+        _ => "bg-secondary"
+    };
+}

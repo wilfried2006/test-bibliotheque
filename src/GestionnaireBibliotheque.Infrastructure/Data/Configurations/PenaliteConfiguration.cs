@@ -1,3 +1,4 @@
+using GestionnaireBibliotheque.Domain.Enums;
 using GestionnaireBibliotheque.Infrastructure.Persistence.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -16,7 +17,13 @@ public class PenaliteConfiguration : IEntityTypeConfiguration<TablePenalite>
         builder.Property(p => p.Montant).HasPrecision(10, 2);
         builder.Property(p => p.DatePenalite).HasDefaultValueSql("GETUTCDATE()");
 
+        builder.Property(p => p.Statut)
+            .IsRequired()
+            .HasConversion<byte>()
+            .HasDefaultValue(StatutPenalite.APayer);
+
         builder.HasIndex(p => p.MembreId);
+        builder.HasIndex(p => p.EmpruntId);
 
         builder.HasOne<TableMembre>()
             .WithMany()

@@ -18,5 +18,10 @@ public class TypeAdherentConfiguration : IEntityTypeConfiguration<TableTypeAdher
         builder.Property(t => t.DureeEmpruntJours).IsRequired();
 
         builder.HasIndex(t => t.Libelle).IsUnique();
+
+        // Types d'adhérent de référence.
+        builder.HasData(
+            new TableTypeAdherent { Id = 1, Libelle = "Adhérent standard", NombreOuvragesMax = 3, DureeEmpruntJours = 21 },
+            new TableTypeAdherent { Id = 2, Libelle = "Adhérent étudiant", NombreOuvragesMax = 5, DureeEmpruntJours = 28 });
     }
 }

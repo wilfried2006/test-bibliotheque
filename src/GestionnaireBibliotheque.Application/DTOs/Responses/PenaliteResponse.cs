@@ -1,3 +1,5 @@
+using GestionnaireBibliotheque.Domain.Enums;
+
 namespace GestionnaireBibliotheque.Application.DTOs.Responses;
 
 public record PenaliteResponse(
@@ -6,4 +8,6 @@ public record PenaliteResponse(
     int ExemplaireId,
     int JoursRetard,
     decimal Montant,
-    DateTime DatePenalite);
+    DateTime DatePenalite,
+    int? EmpruntId,
+    StatutPenalite Statut);

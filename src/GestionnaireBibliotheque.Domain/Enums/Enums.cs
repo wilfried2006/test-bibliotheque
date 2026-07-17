@@ -14,3 +14,16 @@ public enum EtatEmprunt
     Cloture,
     Retard
 }
+
+/// <summary>Statut d'une pénalité.</summary>
+public enum StatutPenalite
+{
+    /// <summary>Exemplaire pas encore rendu, retard en cours (montant calculé à la volée).</summary>
+    EnCours,
+
+    /// <summary>Exemplaire rendu en retard : pénalité due.</summary>
+    APayer,
+
+    /// <summary>Pénalité réglée.</summary>
+    Paye
+}

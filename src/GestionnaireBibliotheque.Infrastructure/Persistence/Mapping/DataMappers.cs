@@ -46,7 +46,7 @@ internal static class DataMappers
 
     // --- Penalite ---
     public static Penalite ToDomain(this TablePenalite d)
-        => Penalite.Reconstituer(d.Id, d.MembreId, d.ExemplaireId, d.JoursRetard, d.Montant, d.DatePenalite);
+        => Penalite.Reconstituer(d.Id, d.MembreId, d.ExemplaireId, d.EmpruntId, d.JoursRetard, d.Montant, d.DatePenalite, d.Statut);
     public static TablePenalite ToData(this Penalite p)
-        => new() { Id = p.Id, MembreId = p.MembreId, ExemplaireId = p.ExemplaireId, JoursRetard = p.JoursRetard, Montant = p.Montant.Valeur, DatePenalite = p.DatePenalite };
+        => new() { Id = p.Id, MembreId = p.MembreId, ExemplaireId = p.ExemplaireId, EmpruntId = p.EmpruntId, JoursRetard = p.JoursRetard, Montant = p.Montant.Valeur, DatePenalite = p.DatePenalite, Statut = p.Statut };
 }

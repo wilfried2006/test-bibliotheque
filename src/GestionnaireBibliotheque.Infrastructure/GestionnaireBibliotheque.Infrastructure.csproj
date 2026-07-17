@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\GestionnaireBibliotheque.Application\GestionnaireBibliotheque.Application.csproj" />
     <ProjectReference Include="..\GestionnaireBibliotheque.Domain\GestionnaireBibliotheque.Domain.csproj" />
   </ItemGroup>
 

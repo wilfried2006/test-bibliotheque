@@ -35,6 +35,4 @@ public class Exemplaire
     }
 
     public void Rendre() => EtatDisponibilite = EtatDisponibilite.Disponible;
-
-    public void ChangerEtat(EtatDisponibilite etat) => EtatDisponibilite = etat;
 }
