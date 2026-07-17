@@ -13,10 +13,7 @@ var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
 builder.Services.AddScoped<IBackApiService, BackApiService>();
 
-// Registrer la couche domaine
-builder.Services.AddDomainServices();
-
-// Registrer les use cases
+// Cas d'usage (clients de l'API)
 builder.Services.AddApplicationUseCases();
 
 await builder.Build().RunAsync();

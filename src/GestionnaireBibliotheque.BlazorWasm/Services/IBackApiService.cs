@@ -6,31 +6,29 @@ public interface IBackApiService
 {
     // Auteurs
     Task<List<AuteurDto>?> RecupereLesAuteursAsync();
-    Task<HttpResponseMessage> CreerAuteurAsync(dynamic request);
+    Task<HttpResponseMessage> CreerAuteurAsync(CreateAuteurRequest request);
 
     // Ouvrages
     Task<List<OuvrageDto>?> RecupereLesOuvragesAsync();
-    Task<HttpResponseMessage> CreerOuvrageAsync(dynamic request);
+    Task<HttpResponseMessage> CreerOuvrageAsync(CreateOuvrageRequest request);
 
     // Exemplaires
     Task<List<ExemplaireDto>?> RecupereLesExemplairesAsync();
-    Task<HttpResponseMessage> CreerExemplaireAsync(dynamic request);
+    Task<HttpResponseMessage> CreerExemplaireAsync(CreateExemplaireRequest request);
 
     // Membres
     Task<List<MembreDto>?> RecupereLesMembreAsync();
-    Task<HttpResponseMessage> CreerMembreAsync(dynamic request);
+    Task<HttpResponseMessage> CreerMembreAsync(CreateMembreRequest request);
 
     // Types d'adhérent
     Task<List<TypeAdherentDto>?> RecupereLesTypesAdherentAsync();
 
     // Emprunts
     Task<List<EmpruntDto>?> RecupereLesEmpruntAsync();
-    Task<HttpResponseMessage> CreerEmpruntAsync(dynamic request);
+    Task<HttpResponseMessage> CreerEmpruntAsync(CreateEmpruntRequest request);
     Task<HttpResponseMessage> RetournerEmpruntAsync(int empruntId);
 
     // Pénalités
     Task<List<PenaliteDto>?> RecupereLespenalitesAsync();
-    Task<List<PenaliteDto>?> RecupereLePenalitesMembreAsync(int membreId);
-    Task<TotalPenalitesDto?> RecupereLeTotalPenalitesMembreAsync(int membreId);
     Task<HttpResponseMessage> MarquerPenalitePayeAsync(int penaliteId);
 }

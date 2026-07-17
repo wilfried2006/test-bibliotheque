@@ -1,4 +1,3 @@
-using GestionnaireBibliotheque.BlazorWasm.Domain.Ouvrages;
 using GestionnaireBibliotheque.BlazorWasm.Models;
 using GestionnaireBibliotheque.BlazorWasm.Services;
 
@@ -8,15 +7,11 @@ public record CreerOuvrageCommand(string Titre, int AuteurId, int NombreExemplai
 
 public class RecupereLesOuvragesUseCase(IBackApiService apiService)
 {
-    public async Task<List<OuvrageDto>?> ExecuteAsync()
-        => await apiService.RecupereLesOuvragesAsync();
+    public Task<List<OuvrageDto>?> ExecuteAsync() => apiService.RecupereLesOuvragesAsync();
 }
 
 public class CreerOuvrageUseCase(IBackApiService apiService)
 {
-    public async Task<HttpResponseMessage> ExecuteAsync(CreerOuvrageCommand command)
-    {
-        var ouvrage = Ouvrage.Creer(command.Titre, command.AuteurId, command.NombreExemplaires);
-        return await apiService.CreerOuvrageAsync(new { ouvrage.Titre, ouvrage.AuteurId, ouvrage.NombreExemplaires });
-    }
+    public Task<HttpResponseMessage> ExecuteAsync(CreerOuvrageCommand command)
+        => apiService.CreerOuvrageAsync(new CreateOuvrageRequest(command.Titre, command.AuteurId, command.NombreExemplaires));
 }

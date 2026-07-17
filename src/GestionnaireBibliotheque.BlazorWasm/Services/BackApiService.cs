@@ -6,60 +6,41 @@ namespace GestionnaireBibliotheque.BlazorWasm.Services;
 
 public class BackApiService(HttpClient httpClient) : IBackApiService
 {
-    public async Task<List<AuteurDto>?> RecupereLesAuteursAsync()
-        => await GetAsync<List<AuteurDto>>("api/auteurs");
+    // --- Auteurs ---
+    public Task<List<AuteurDto>?> RecupereLesAuteursAsync() => GetAsync<List<AuteurDto>>("api/auteurs");
+    public Task<HttpResponseMessage> CreerAuteurAsync(CreateAuteurRequest request) => PostAsync("api/auteurs", request);
 
-    public async Task<HttpResponseMessage> CreerAuteurAsync(dynamic request)
-        => await PostRawAsync("api/auteurs", request);
+    // --- Ouvrages ---
+    public Task<List<OuvrageDto>?> RecupereLesOuvragesAsync() => GetAsync<List<OuvrageDto>>("api/ouvrages");
+    public Task<HttpResponseMessage> CreerOuvrageAsync(CreateOuvrageRequest request) => PostAsync("api/ouvrages", request);
 
-    public async Task<List<OuvrageDto>?> RecupereLesOuvragesAsync()
-        => await GetAsync<List<OuvrageDto>>("api/ouvrages");
+    // --- Exemplaires ---
+    public Task<List<ExemplaireDto>?> RecupereLesExemplairesAsync() => GetAsync<List<ExemplaireDto>>("api/exemplaires");
+    public Task<HttpResponseMessage> CreerExemplaireAsync(CreateExemplaireRequest request) => PostAsync("api/exemplaires", request);
 
-    public async Task<HttpResponseMessage> CreerOuvrageAsync(dynamic request)
-        => await PostRawAsync("api/ouvrages", request);
+    // --- Membres ---
+    public Task<List<MembreDto>?> RecupereLesMembreAsync() => GetAsync<List<MembreDto>>("api/membres");
+    public Task<HttpResponseMessage> CreerMembreAsync(CreateMembreRequest request) => PostAsync("api/membres", request);
 
-    public async Task<List<ExemplaireDto>?> RecupereLesExemplairesAsync()
-        => await GetAsync<List<ExemplaireDto>>("api/exemplaires");
+    // --- Types d'adhérent ---
+    public Task<List<TypeAdherentDto>?> RecupereLesTypesAdherentAsync() => GetAsync<List<TypeAdherentDto>>("api/typesadherent");
 
-    public async Task<HttpResponseMessage> CreerExemplaireAsync(dynamic request)
-        => await PostRawAsync("api/exemplaires", request);
+    // --- Emprunts ---
+    public Task<List<EmpruntDto>?> RecupereLesEmpruntAsync() => GetAsync<List<EmpruntDto>>("api/emprunts");
+    public Task<HttpResponseMessage> CreerEmpruntAsync(CreateEmpruntRequest request) => PostAsync("api/emprunts", request);
+    public Task<HttpResponseMessage> RetournerEmpruntAsync(int empruntId) => PostAsync($"api/emprunts/{empruntId}/retour");
 
-    public async Task<List<MembreDto>?> RecupereLesMembreAsync()
-        => await GetAsync<List<MembreDto>>("api/membres");
+    // --- Pénalités ---
+    public Task<List<PenaliteDto>?> RecupereLespenalitesAsync() => GetAsync<List<PenaliteDto>>("api/penalites");
+    public Task<HttpResponseMessage> MarquerPenalitePayeAsync(int penaliteId) => PostAsync($"api/penalites/{penaliteId}/payer");
 
-    public async Task<HttpResponseMessage> CreerMembreAsync(dynamic request)
-        => await PostRawAsync("api/membres", request);
-
-    public async Task<List<TypeAdherentDto>?> RecupereLesTypesAdherentAsync()
-        => await GetAsync<List<TypeAdherentDto>>("api/typesadherent");
-
-    public async Task<List<EmpruntDto>?> RecupereLesEmpruntAsync()
-        => await GetAsync<List<EmpruntDto>>("api/emprunts");
-
-    public async Task<HttpResponseMessage> CreerEmpruntAsync(dynamic request)
-        => await PostRawAsync("api/emprunts", request);
-
-    public async Task<HttpResponseMessage> RetournerEmpruntAsync(int empruntId)
-        => await PostRawAsync($"api/emprunts/{empruntId}/retour", new { });
-
-    public async Task<List<PenaliteDto>?> RecupereLespenalitesAsync()
-        => await GetAsync<List<PenaliteDto>>("api/penalites");
-
-    public async Task<List<PenaliteDto>?> RecupereLePenalitesMembreAsync(int membreId)
-        => await GetAsync<List<PenaliteDto>>($"api/membres/{membreId}/penalites");
-
-    public async Task<TotalPenalitesDto?> RecupereLeTotalPenalitesMembreAsync(int membreId)
-        => await GetAsync<TotalPenalitesDto>($"api/membres/{membreId}/penalites/total");
-
-    public async Task<HttpResponseMessage> MarquerPenalitePayeAsync(int penaliteId)
-        => await PostRawAsync($"api/penalites/{penaliteId}/payer", new { });
+    // --- Helpers HTTP ---
 
     private async Task<T?> GetAsync<T>(string endpoint)
     {
         try
         {
-            // NoStore : contourne le cache navigateur pour toujours relire l'état frais du serveur
-            // (sinon la liste peut rester périmée après une création / un retour).
+            // NoStore : contourne le cache navigateur pour toujours relire l'état frais du serveur.
             using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
             request.SetBrowserRequestCache(BrowserRequestCache.NoStore);
             using var response = await httpClient.SendAsync(request);
@@ -72,9 +53,9 @@ public class BackApiService(HttpClient httpClient) : IBackApiService
         }
     }
 
-    private async Task<HttpResponseMessage> PostRawAsync(string endpoint, dynamic data)
-    {
-        using var content = JsonContent.Create(data);
-        return await httpClient.PostAsync(endpoint, content);
-    }
+    // POST typé (System.Text.Json) — aucune réflexion dynamique (DLR), compatible trimming/AOT.
+    private Task<HttpResponseMessage> PostAsync<T>(string endpoint, T data) => httpClient.PostAsJsonAsync(endpoint, data);
+
+    // POST sans corps : l'identifiant est porté par la route (retour d'emprunt, paiement de pénalité).
+    private Task<HttpResponseMessage> PostAsync(string endpoint) => httpClient.PostAsync(endpoint, content: null);
 }

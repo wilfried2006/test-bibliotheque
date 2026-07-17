@@ -205,16 +205,11 @@ else
     private string TitreOuvrage(int ouvrageId)
         => ouvrages?.FirstOrDefault(o => o.Id == ouvrageId)?.Titre ?? $"Ouvrage #{ouvrageId}";
 
-    private static string CodeCourt(Guid code) => code.ToString()[..8];
-
     private string LibelleExemplaire(int exemplaireId)
     {
         var ex = exemplaires?.FirstOrDefault(x => x.Id == exemplaireId);
         return ex is null ? $"#{exemplaireId}" : $"{TitreOuvrage(ex.OuvrageId)}";
     }
-
-    private string BarcodeExemplaire(int exemplaireId)
-        => exemplaires?.FirstOrDefault(x => x.Id == exemplaireId)?.CodeBarre.ToString() ?? "—";
 
     private string LibelleMembre(int membreId)
     {

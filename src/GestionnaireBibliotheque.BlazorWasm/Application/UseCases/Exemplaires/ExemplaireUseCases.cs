@@ -1,4 +1,3 @@
-using GestionnaireBibliotheque.BlazorWasm.Domain.Ouvrages;
 using GestionnaireBibliotheque.BlazorWasm.Models;
 using GestionnaireBibliotheque.BlazorWasm.Services;
 
@@ -8,15 +7,11 @@ public record CreerExemplaireCommand(int OuvrageId, string EtatDisponibilite);
 
 public class RecupereLesExemplairesUseCase(IBackApiService apiService)
 {
-    public async Task<List<ExemplaireDto>?> ExecuteAsync()
-        => await apiService.RecupereLesExemplairesAsync();
+    public Task<List<ExemplaireDto>?> ExecuteAsync() => apiService.RecupereLesExemplairesAsync();
 }
 
 public class CreerExemplaireUseCase(IBackApiService apiService)
 {
-    public async Task<HttpResponseMessage> ExecuteAsync(CreerExemplaireCommand command)
-    {
-        var exemplaire = Exemplaire.Creer(command.OuvrageId, command.EtatDisponibilite);
-        return await apiService.CreerExemplaireAsync(new { exemplaire.OuvrageId, exemplaire.EtatDisponibilite });
-    }
+    public Task<HttpResponseMessage> ExecuteAsync(CreerExemplaireCommand command)
+        => apiService.CreerExemplaireAsync(new CreateExemplaireRequest(command.OuvrageId, command.EtatDisponibilite));
 }

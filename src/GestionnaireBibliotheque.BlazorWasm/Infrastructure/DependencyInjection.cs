@@ -4,20 +4,11 @@ using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Emprunts;
 using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Membres;
 using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Ouvrages;
 using GestionnaireBibliotheque.BlazorWasm.Application.UseCases.Penalites;
-using GestionnaireBibliotheque.BlazorWasm.Domain.Services;
-using GestionnaireBibliotheque.BlazorWasm.Services;
 
 namespace GestionnaireBibliotheque.BlazorWasm.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddDomainServices(this IServiceCollection services)
-    {
-        services.AddScoped<CalculPenaliteService>();
-        services.AddScoped<VerificationLimitesEmpruntService>();
-        return services;
-    }
-
     public static IServiceCollection AddApplicationUseCases(this IServiceCollection services)
     {
         // Auteurs
@@ -44,17 +35,8 @@ public static class DependencyInjection
 
         // Pénalités
         services.AddScoped<RecupereLespenalitesUseCase>();
-        services.AddScoped<RecupereLePenalitesMembreUseCase>();
-        services.AddScoped<RecupereLeTotalPenalitesMembreUseCase>();
         services.AddScoped<MarquerPenalitePayeUseCase>();
 
-        return services;
-    }
-
-    public static IServiceCollection AddDomainSpecifications(this IServiceCollection services)
-    {
-        // Les Specifications sont des classes de critères, pas des services injectables
-        // Elles sont utilisées directement dans les Use Cases ou Services
         return services;
     }
 }

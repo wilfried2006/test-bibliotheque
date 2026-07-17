@@ -1,4 +1,3 @@
-using GestionnaireBibliotheque.BlazorWasm.Domain.Emprunts;
 using GestionnaireBibliotheque.BlazorWasm.Models;
 using GestionnaireBibliotheque.BlazorWasm.Services;
 
@@ -9,24 +8,18 @@ public record RetournerEmpruntCommand(int EmpruntId);
 
 public class RecupereLesEmpruntUseCase(IBackApiService apiService)
 {
-    public async Task<List<EmpruntDto>?> ExecuteAsync()
-        => await apiService.RecupereLesEmpruntAsync();
+    public Task<List<EmpruntDto>?> ExecuteAsync() => apiService.RecupereLesEmpruntAsync();
 }
 
 public class CreerEmpruntUseCase(IBackApiService apiService)
 {
-    public async Task<HttpResponseMessage> ExecuteAsync(CreerEmpruntCommand command)
-    {
-        var dateEmprunt = DateTime.Today;
-        var dateRetourPrevue = dateEmprunt.AddDays(14);
-        var emprunt = Emprunt.Creer(1, command.MembreId, dateEmprunt, dateRetourPrevue);
-
-        return await apiService.CreerEmpruntAsync(new { command.OuvrageId, command.MembreId });
-    }
+    // Le serveur choisit l'exemplaire disponible et calcule l'échéance selon le type d'adhérent.
+    public Task<HttpResponseMessage> ExecuteAsync(CreerEmpruntCommand command)
+        => apiService.CreerEmpruntAsync(new CreateEmpruntRequest(command.OuvrageId, command.MembreId));
 }
 
 public class RetournerEmpruntUseCase(IBackApiService apiService)
 {
-    public async Task<HttpResponseMessage> ExecuteAsync(RetournerEmpruntCommand command)
-        => await apiService.RetournerEmpruntAsync(command.EmpruntId);
+    public Task<HttpResponseMessage> ExecuteAsync(RetournerEmpruntCommand command)
+        => apiService.RetournerEmpruntAsync(command.EmpruntId);
 }

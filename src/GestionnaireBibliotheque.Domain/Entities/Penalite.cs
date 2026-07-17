@@ -10,6 +10,9 @@ public class Penalite
 
     public const decimal PlafondTotal = 10.00m;
 
+    /// <summary>Plafond du total des pénalités en cours d'un membre.</summary>
+    public static readonly Montant Plafond = Montant.De(PlafondTotal);
+
     public int Id { get; private set; }
     public int MembreId { get; private set; }
     public int ExemplaireId { get; private set; }
@@ -32,7 +35,7 @@ public class Penalite
             ExemplaireId = exemplaireId,
             EmpruntId = empruntId,
             JoursRetard = joursRetard,
-            Montant = Montant.De(TarifJournalier * joursRetard),
+            Montant = MontantRetard(joursRetard),
             DatePenalite = date,
             Statut = StatutPenalite.APayer
         };
@@ -55,4 +58,22 @@ public class Penalite
 
     /// <summary>Marque la pénalité comme réglée (idempotent).</summary>
     public void MarquerPaye() => Statut = StatutPenalite.Paye;
+
+    /// <summary>
+    /// Montant d'une pénalité de retard pour un nombre de jours donné — règle unique du domaine
+    /// (tarif journalier × jours), via le VO <see cref="Montant"/> (arrondi centime, non négatif).
+    /// Utilisée aussi bien pour une pénalité persistée que pour un retard « en cours » calculé.
+    /// </summary>
+    public static Montant MontantRetard(int joursRetard)
+        => joursRetard <= 0 ? Montant.Zero : Montant.De(TarifJournalier * joursRetard);
+
+    /// <summary>
+    /// Politique de pénalité : solde en cours d'un membre = somme des montants (via le VO Montant),
+    /// plafonnée à <see cref="Plafond"/>. Toute la règle vit dans le domaine.
+    /// </summary>
+    public static SoldePenalites CalculerSolde(IEnumerable<Penalite> penalites)
+    {
+        var brut = penalites.Aggregate(Montant.Zero, (acc, p) => acc + p.Montant);
+        return new SoldePenalites(brut, brut.Plafonner(Plafond), Plafond);
+    }
 }

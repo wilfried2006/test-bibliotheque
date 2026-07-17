@@ -9,5 +9,3 @@ public record PenaliteDto(
     DateTime DatePenalite,
     int? EmpruntId,
     string Statut);
-
-public record TotalPenalitesDto(int MembreId, decimal Total, decimal Plafond, bool Plafonne);

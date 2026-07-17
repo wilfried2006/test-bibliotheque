@@ -27,7 +27,7 @@ public class PenaliteService(
                 MembreId: e.MembreId,
                 ExemplaireId: e.ExemplaireId,
                 JoursRetard: e.JoursRetard,
-                Montant: Penalite.TarifJournalier * e.JoursRetard,
+                Montant: Penalite.MontantRetard(e.JoursRetard).Valeur,
                 DatePenalite: e.DateRetourPrevue,
                 EmpruntId: e.Id,
                 Statut: StatutPenalite.EnCours));
@@ -61,11 +61,8 @@ public class PenaliteService(
 
     public async Task<TotalPenalitesResponse> GetTotalEnCoursAsync(int membreId, CancellationToken cancellationToken = default)
     {
-        var penalites = await repository.ListerParMembreAsync(membreId, cancellationToken);
-
-        var brut = penalites.Aggregate(0m, (total, p) => total + p.Montant.Valeur);
-        var total = Math.Min(brut, Penalite.PlafondTotal);
-
-        return new TotalPenalitesResponse(membreId, total, Penalite.PlafondTotal, Plafonne: brut > Penalite.PlafondTotal);
+        // La politique (somme des montants + plafonnement) est portée par le domaine.
+        var solde = Penalite.CalculerSolde(await repository.ListerParMembreAsync(membreId, cancellationToken));
+        return new TotalPenalitesResponse(membreId, solde.Total.Valeur, solde.Plafond.Valeur, solde.EstPlafonne);
     }
 }
